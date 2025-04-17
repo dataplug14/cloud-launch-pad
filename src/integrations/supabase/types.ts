@@ -9,7 +9,140 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      ec2_instances: {
+        Row: {
+          created_at: string | null
+          id: string
+          instance_id: string
+          launch_time: string
+          name: string
+          status: string
+          type: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          instance_id: string
+          launch_time: string
+          name: string
+          status: string
+          type: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          instance_id?: string
+          launch_time?: string
+          name?: string
+          status?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          billing_address: string | null
+          company: string | null
+          full_name: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          billing_address?: string | null
+          company?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string | null
+        }
+        Update: {
+          billing_address?: string | null
+          company?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          currency: string
+          id: string
+          payment_method: string
+          reference: string
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          currency?: string
+          id?: string
+          payment_method?: string
+          reference: string
+          status: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          currency?: string
+          id?: string
+          payment_method?: string
+          reference?: string
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      usage_statistics: {
+        Row: {
+          cpu_usage: number | null
+          id: string
+          instance_id: string | null
+          memory_usage: number | null
+          network_in: number | null
+          network_out: number | null
+          timestamp: string | null
+          user_id: string | null
+        }
+        Insert: {
+          cpu_usage?: number | null
+          id?: string
+          instance_id?: string | null
+          memory_usage?: number | null
+          network_in?: number | null
+          network_out?: number | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          cpu_usage?: number | null
+          id?: string
+          instance_id?: string | null
+          memory_usage?: number | null
+          network_in?: number | null
+          network_out?: number | null
+          timestamp?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_statistics_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "ec2_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

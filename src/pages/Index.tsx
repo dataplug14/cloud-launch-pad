@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { 
@@ -13,53 +14,126 @@ import {
   AlertDialogCancel,
   AlertDialogAction
 } from "@/components/ui/alert-dialog";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from '@/contexts/AuthContext';
+import { awsService } from '@/services/awsService';
+import { supabase } from '@/integrations/supabase/client';
+import InstanceDetails from '@/components/InstanceDetails';
 
-// Type definition for EC2 instances without modifying the types.ts file
+// Type definition for EC2 instances
 type EC2Instance = {
   id: string;
+  instance_id: string;
   name: string;
   status: "running" | "stopped" | "terminated";
   type: string;
-  launchTime: string;
+  launch_time: string;
 };
 
 const Index = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
+  const { user, profile, signOut, isLoading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  
+  const [loading, setLoading] = useState(true);
   const [instances, setInstances] = useState<EC2Instance[]>([]);
-
-  // Example instances for display purposes
+  const [showLaunchDialog, setShowLaunchDialog] = useState(false);
+  const [instanceName, setInstanceName] = useState('');
+  const [instanceType, setInstanceType] = useState('t2.micro');
+  const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
+  
+  // Dashboard statistics
+  const [stats, setStats] = useState({
+    total: 0,
+    running: 0,
+    stopped: 0,
+    terminated: 0
+  });
+  
+  // Chart data
+  const [cpuUsageData, setCpuUsageData] = useState<any[]>([]);
+  
   useEffect(() => {
-    // In a real app, we would fetch instances from Supabase
-    setInstances([
-      {
-        id: "i-12345678",
-        name: "Web Server",
-        status: "running",
-        type: "t2.micro",
-        launchTime: new Date().toISOString()
-      },
-      {
-        id: "i-87654321",
-        name: "Database",
-        status: "stopped",
-        type: "t2.small",
-        launchTime: new Date(Date.now() - 86400000).toISOString()
-      }
-    ]);
-  }, []);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!email) {
+    if (user) {
+      fetchInstances();
+      
+      // Set up real-time subscription to instance changes
+      const channel = supabase
+        .channel('schema-db-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'ec2_instances'
+          },
+          (payload) => {
+            fetchInstances();
+          }
+        )
+        .subscribe();
+        
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [user]);
+  
+  const fetchInstances = async () => {
+    try {
+      setLoading(true);
+      const instances = await awsService.getInstances();
+      setInstances(instances);
+      
+      // Update stats
+      const total = instances.length;
+      const running = instances.filter(i => i.status === 'running').length;
+      const stopped = instances.filter(i => i.status === 'stopped').length;
+      const terminated = instances.filter(i => i.status === 'terminated').length;
+      
+      setStats({
+        total,
+        running,
+        stopped,
+        terminated
+      });
+      
+      // Generate some dummy CPU usage data for the chart
+      const now = new Date();
+      const cpuData = Array.from({ length: 10 }, (_, i) => {
+        const date = new Date(now);
+        date.setMinutes(date.getMinutes() - (9 - i) * 30);
+        return {
+          timestamp: date.toLocaleTimeString(),
+          value: Math.floor(Math.random() * 60) + 10 // Random value between 10-70%
+        };
+      });
+      
+      setCpuUsageData(cpuData);
+      
+    } catch (error) {
+      console.error('Error fetching instances:', error);
       toast({
         title: "Error",
-        description: "Please enter your email",
+        description: "Failed to load EC2 instances",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const launchInstance = async () => {
+    if (!instanceName) {
+      toast({
+        title: "Error",
+        description: "Please enter an instance name",
         variant: "destructive"
       });
       return;
@@ -67,105 +141,61 @@ const Index = () => {
     
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: window.location.origin,
-        }
-      });
-      
-      if (error) throw error;
+      await awsService.launchInstance(instanceName, instanceType);
       
       toast({
-        title: "Magic link sent",
-        description: "Check your email for the login link",
+        title: "Instance Launched",
+        description: `New EC2 instance ${instanceName} is now running`,
       });
       
-      // For demo purposes only - in a real app we would verify the magic link
-      setTimeout(() => {
-        setIsLoggedIn(true);
-        setLoading(false);
-      }, 2000);
+      setShowLaunchDialog(false);
+      setInstanceName('');
       
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "An error occurred during login",
+        description: error.message || "Failed to launch instance",
         variant: "destructive"
       });
+    } finally {
       setLoading(false);
     }
   };
 
-  const launchInstance = () => {
-    const newInstance: EC2Instance = {
-      id: `i-${Math.random().toString(36).substr(2, 8)}`,
-      name: "New Instance",
-      status: "running",
-      type: "t2.micro",
-      launchTime: new Date().toISOString()
-    };
-    
-    setInstances([...instances, newInstance]);
-    
-    toast({
-      title: "Instance Launched",
-      description: `New EC2 instance ${newInstance.id} is now running`,
-    });
+  const terminateInstance = async (instanceId: string) => {
+    try {
+      setLoading(true);
+      await awsService.terminateInstance(instanceId);
+      
+      toast({
+        title: "Instance Terminated",
+        description: `EC2 instance has been terminated`,
+      });
+      
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to terminate instance",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
-
-  const terminateInstance = (instanceId: string) => {
-    setInstances(instances.map(instance => 
-      instance.id === instanceId 
-        ? { ...instance, status: "terminated" } 
-        : instance
-    ));
-    
-    toast({
-      title: "Instance Terminated",
-      description: `EC2 instance ${instanceId} has been terminated`,
-    });
-  };
-
-  // Login screen when not logged in
-  if (!isLoggedIn) {
+  
+  // If auth is loading, show loading spinner
+  if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-center mb-6">AWS EC2 Manager</h1>
-          
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="your@email.com"
-                required
-              />
-            </div>
-            
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Sending Magic Link..." : "Login with Magic Link"}
-            </Button>
-          </form>
-          
-          <div className="mt-6">
-            <Alert>
-              <AlertTitle>Demo Mode</AlertTitle>
-              <AlertDescription>
-                This is a demo application. Enter any email and the login will be simulated.
-              </AlertDescription>
-            </Alert>
-          </div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
+  }
+  
+  // If no user is logged in, redirect to auth page
+  if (!user) {
+    navigate('/auth');
+    return null;
   }
 
   // Dashboard when logged in
@@ -174,21 +204,154 @@ const Index = () => {
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <h1 className="text-3xl font-bold text-gray-900">AWS EC2 Manager</h1>
-          <Button 
-            variant="outline" 
-            onClick={() => setIsLoggedIn(false)}
-          >
-            Logout
-          </Button>
+          <div className="flex items-center space-x-4">
+            <span className="text-sm text-gray-600">
+              Welcome, {profile?.full_name || user.email}
+            </span>
+            <div className="flex space-x-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => navigate('/profile')}
+              >
+                Profile
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => navigate('/billing')}
+              >
+                Billing
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={signOut}
+              >
+                Logout
+              </Button>
+            </div>
+          </div>
         </div>
       </header>
       
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {/* Dashboard Stats */}
         <div className="px-4 py-6 sm:px-0">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Total Instances
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{stats.total}</div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-green-600">
+                  Running Instances
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{stats.running}</div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-yellow-600">
+                  Stopped Instances
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{stats.stopped}</div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-red-600">
+                  Terminated Instances
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{stats.terminated}</div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          {/* Usage Overview Chart */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Resource Usage Overview</CardTitle>
+            </CardHeader>
+            <CardContent className="h-80">
+              <ChartContainer
+                config={{
+                  cpuUsage: {
+                    label: "CPU Usage",
+                    color: "#2563eb"
+                  }
+                }}
+              >
+                <AreaChart data={cpuUsageData}>
+                  <XAxis
+                    dataKey="timestamp"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={10}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={10}
+                    tickFormatter={(value) => `${value}%`}
+                  />
+                  <ChartTooltip
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <ChartTooltipContent
+                            content={
+                              <div>
+                                <p>
+                                  CPU Usage: <span className="font-medium">{payload[0].value}%</span>
+                                </p>
+                              </div>
+                            }
+                          />
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    name="cpuUsage"
+                    stroke="#2563eb"
+                    fill="url(#cpu-gradient)"
+                    strokeWidth={2}
+                  />
+                  <defs>
+                    <linearGradient id="cpu-gradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#2563eb" stopOpacity={0.4} />
+                      <stop offset="100%" stopColor="#2563eb" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                </AreaChart>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+          
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold">Your EC2 Instances</h2>
             
-            <AlertDialog>
+            <AlertDialog open={showLaunchDialog} onOpenChange={setShowLaunchDialog}>
               <AlertDialogTrigger asChild>
                 <Button>Launch New Instance</Button>
               </AlertDialogTrigger>
@@ -196,10 +359,40 @@ const Index = () => {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Launch EC2 Instance</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will launch a new t2.micro instance with Ubuntu. 
-                    In a real application, you would configure instance details here.
+                    Configure your new EC2 instance below.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
+                
+                <div className="grid gap-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Instance Name</Label>
+                    <Input 
+                      id="name" 
+                      value={instanceName}
+                      onChange={(e) => setInstanceName(e.target.value)}
+                      placeholder="My Instance"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="type">Instance Type</Label>
+                    <Select 
+                      value={instanceType} 
+                      onValueChange={setInstanceType}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="t2.micro">t2.micro (1 vCPU, 1 GiB RAM)</SelectItem>
+                        <SelectItem value="t2.small">t2.small (1 vCPU, 2 GiB RAM)</SelectItem>
+                        <SelectItem value="t2.medium">t2.medium (2 vCPU, 4 GiB RAM)</SelectItem>
+                        <SelectItem value="t2.large">t2.large (2 vCPU, 8 GiB RAM)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction onClick={launchInstance}>
@@ -210,7 +403,7 @@ const Index = () => {
             </AlertDialog>
           </div>
           
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+          <Card>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -223,63 +416,96 @@ const Index = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {instances.map((instance) => (
-                  <TableRow key={instance.id}>
-                    <TableCell>{instance.id}</TableCell>
-                    <TableCell>{instance.name}</TableCell>
-                    <TableCell>{instance.type}</TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        instance.status === 'running' ? 'bg-green-100 text-green-800' :
-                        instance.status === 'stopped' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {instance.status}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(instance.launchTime).toLocaleString()}
-                    </TableCell>
-                    <TableCell>
-                      {instance.status !== 'terminated' && (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm">
-                              Terminate
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Terminate Instance</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to terminate this instance? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction 
-                                onClick={() => terminateInstance(instance.id)}
-                              >
-                                Terminate
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      )}
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      <div className="flex justify-center">
+                        <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))}
-                
-                {instances.length === 0 && (
+                ) : instances.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8">
                       No instances found. Launch your first instance to get started.
                     </TableCell>
                   </TableRow>
+                ) : (
+                  instances.map((instance) => (
+                    <TableRow key={instance.id}>
+                      <TableCell>
+                        <button 
+                          onClick={() => setSelectedInstanceId(instance.id)}
+                          className="text-blue-600 hover:underline"
+                        >
+                          {instance.instance_id}
+                        </button>
+                      </TableCell>
+                      <TableCell>{instance.name}</TableCell>
+                      <TableCell>{instance.type}</TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          instance.status === 'running' ? 'bg-green-100 text-green-800' :
+                          instance.status === 'stopped' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {instance.status}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(instance.launch_time).toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        {instance.status !== 'terminated' && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="destructive" size="sm">
+                                Terminate
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Terminate Instance</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to terminate this instance? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => terminateInstance(instance.id)}
+                                >
+                                  Terminate
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>
-          </div>
+          </Card>
+          
+          {/* Instance Details Sheet */}
+          <Sheet 
+            open={selectedInstanceId !== null} 
+            onOpenChange={(open) => {
+              if (!open) setSelectedInstanceId(null);
+            }}
+          >
+            <SheetContent side="right" className="sm:max-w-2xl">
+              {selectedInstanceId && (
+                <InstanceDetails 
+                  instanceId={selectedInstanceId}
+                  onClose={() => setSelectedInstanceId(null)}
+                  onTerminate={terminateInstance}
+                />
+              )}
+            </SheetContent>
+          </Sheet>
         </div>
       </main>
     </div>
