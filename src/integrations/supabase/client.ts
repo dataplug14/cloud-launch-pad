@@ -17,6 +17,11 @@ export const supabase = createClient<Database>(
       storage: localStorage,
       persistSession: true,
       autoRefreshToken: true,
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 10
+      }
     }
   }
 );

@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { 
   AlertDialog,
-  AlertDialogTrigger,
   AlertDialogContent,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -14,18 +13,16 @@ import {
   AlertDialogCancel,
   AlertDialogAction
 } from "@/components/ui/alert-dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { awsService } from '@/services/awsService';
 import { supabase } from '@/integrations/supabase/client';
-import InstanceDetails from '@/components/InstanceDetails';
+import InstanceDetailsExtended from '@/components/InstanceDetailsExtended';
+import LaunchInstanceForm from '@/components/LaunchInstanceForm';
 import { Database } from '@/integrations/supabase/types';
 
 // Type definition for EC2 instances
@@ -36,6 +33,10 @@ type EC2Instance = {
   status: "running" | "stopped" | "terminated";
   type: string;
   launch_time: string;
+  storage?: number;
+  location?: string;
+  ipv6_enabled?: boolean;
+  ssh_enabled?: boolean;
   created_at?: string | null;
   updated_at?: string | null;
   user_id?: string | null;
@@ -48,8 +49,6 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [instances, setInstances] = useState<EC2Instance[]>([]);
   const [showLaunchDialog, setShowLaunchDialog] = useState(false);
-  const [instanceName, setInstanceName] = useState('');
-  const [instanceType, setInstanceType] = useState('t2.micro');
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
   
   // Dashboard statistics
@@ -92,15 +91,10 @@ const Index = () => {
   const fetchInstances = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('ec2_instances')
-        .select('*')
-        .order('created_at', { ascending: false });
-        
-      if (error) throw error;
+      const instancesData = await awsService.getInstances();
         
       // Ensure the data matches our EC2Instance type
-      const typedInstances: EC2Instance[] = data.map(instance => ({
+      const typedInstances: EC2Instance[] = instancesData.map(instance => ({
         ...instance,
         status: instance.status as "running" | "stopped" | "terminated"
       }));
@@ -145,37 +139,9 @@ const Index = () => {
     }
   };
 
-  const launchInstance = async () => {
-    if (!instanceName) {
-      toast({
-        title: "Error",
-        description: "Please enter an instance name",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      await awsService.launchInstance(instanceName, instanceType);
-      
-      toast({
-        title: "Instance Launched",
-        description: `New EC2 instance ${instanceName} is now running`,
-      });
-      
-      setShowLaunchDialog(false);
-      setInstanceName('');
-      
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to launch instance",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
+  const handleLaunchFormSuccess = () => {
+    setShowLaunchDialog(false);
+    fetchInstances();
   };
 
   const terminateInstance = async (instanceId: string) => {
@@ -219,7 +185,7 @@ const Index = () => {
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">AWS EC2 Manager</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Cloud Console</h1>
           <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-600">
               Welcome, {profile?.full_name || user.email}
@@ -363,56 +329,19 @@ const Index = () => {
           </Card>
           
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold">Your EC2 Instances</h2>
+            <h2 className="text-xl font-semibold">Your Virtual Machines</h2>
             
             <AlertDialog open={showLaunchDialog} onOpenChange={setShowLaunchDialog}>
-              <AlertDialogTrigger asChild>
-                <Button>Launch New Instance</Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
+              <Button onClick={() => setShowLaunchDialog(true)}>Launch New Instance</Button>
+              <AlertDialogContent className="max-w-3xl">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Launch EC2 Instance</AlertDialogTitle>
+                  <AlertDialogTitle>Launch Virtual Machine</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Configure your new EC2 instance below.
+                    Configure your new virtual machine with the options below.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 
-                <div className="grid gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Instance Name</Label>
-                    <Input 
-                      id="name" 
-                      value={instanceName}
-                      onChange={(e) => setInstanceName(e.target.value)}
-                      placeholder="My Instance"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="type">Instance Type</Label>
-                    <Select 
-                      value={instanceType} 
-                      onValueChange={setInstanceType}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="t2.micro">t2.micro (1 vCPU, 1 GiB RAM)</SelectItem>
-                        <SelectItem value="t2.small">t2.small (1 vCPU, 2 GiB RAM)</SelectItem>
-                        <SelectItem value="t2.medium">t2.medium (2 vCPU, 4 GiB RAM)</SelectItem>
-                        <SelectItem value="t2.large">t2.large (2 vCPU, 8 GiB RAM)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={launchInstance}>
-                    Launch Instance
-                  </AlertDialogAction>
-                </AlertDialogFooter>
+                <LaunchInstanceForm onSuccess={handleLaunchFormSuccess} />
               </AlertDialogContent>
             </AlertDialog>
           </div>
@@ -425,6 +354,7 @@ const Index = () => {
                   <TableHead>Name</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Location</TableHead>
                   <TableHead>Launch Time</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -432,7 +362,7 @@ const Index = () => {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={7} className="text-center py-8">
                       <div className="flex justify-center">
                         <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
                       </div>
@@ -440,7 +370,7 @@ const Index = () => {
                   </TableRow>
                 ) : instances.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={7} className="text-center py-8">
                       No instances found. Launch your first instance to get started.
                     </TableCell>
                   </TableRow>
@@ -466,6 +396,7 @@ const Index = () => {
                           {instance.status}
                         </span>
                       </TableCell>
+                      <TableCell>{instance.location || 'us-east-1'}</TableCell>
                       <TableCell>
                         {new Date(instance.launch_time).toLocaleString()}
                       </TableCell>
@@ -510,9 +441,9 @@ const Index = () => {
               if (!open) setSelectedInstanceId(null);
             }}
           >
-            <SheetContent side="right" className="sm:max-w-2xl">
+            <SheetContent side="right" className="sm:max-w-2xl w-[95vw]">
               {selectedInstanceId && (
-                <InstanceDetails 
+                <InstanceDetailsExtended 
                   instanceId={selectedInstanceId}
                   onClose={() => setSelectedInstanceId(null)}
                   onTerminate={terminateInstance}
