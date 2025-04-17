@@ -9,6 +9,7 @@ import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { awsService } from '@/services/awsService';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from '@/integrations/supabase/client';
 
 interface InstanceDetailsProps {
   instanceId: string;
@@ -207,15 +208,13 @@ const InstanceDetails = ({ instanceId, onClose, onTerminate }: InstanceDetailsPr
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         return (
-                          <ChartTooltipContent
-                            content={
-                              <div>
-                                <p>
-                                  CPU Usage: <span className="font-medium">{payload[0].value}%</span>
-                                </p>
-                              </div>
-                            }
-                          />
+                          <ChartTooltipContent>
+                            <div>
+                              <p>
+                                CPU Usage: <span className="font-medium">{payload[0].value}%</span>
+                              </p>
+                            </div>
+                          </ChartTooltipContent>
                         );
                       }
                       return null;
@@ -276,15 +275,13 @@ const InstanceDetails = ({ instanceId, onClose, onTerminate }: InstanceDetailsPr
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         return (
-                          <ChartTooltipContent
-                            content={
-                              <div>
-                                <p>
-                                  Memory Usage: <span className="font-medium">{payload[0].value}%</span>
-                                </p>
-                              </div>
-                            }
-                          />
+                          <ChartTooltipContent>
+                            <div>
+                              <p>
+                                Memory Usage: <span className="font-medium">{payload[0].value}%</span>
+                              </p>
+                            </div>
+                          </ChartTooltipContent>
                         );
                       }
                       return null;

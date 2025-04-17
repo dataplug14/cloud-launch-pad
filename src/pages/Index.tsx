@@ -26,6 +26,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { awsService } from '@/services/awsService';
 import { supabase } from '@/integrations/supabase/client';
 import InstanceDetails from '@/components/InstanceDetails';
+import { Database } from '@/integrations/supabase/types';
 
 // Type definition for EC2 instances
 type EC2Instance = {
@@ -35,6 +36,9 @@ type EC2Instance = {
   status: "running" | "stopped" | "terminated";
   type: string;
   launch_time: string;
+  created_at?: string | null;
+  updated_at?: string | null;
+  user_id?: string | null;
 };
 
 const Index = () => {
@@ -88,14 +92,26 @@ const Index = () => {
   const fetchInstances = async () => {
     try {
       setLoading(true);
-      const instances = await awsService.getInstances();
-      setInstances(instances);
+      const { data, error } = await supabase
+        .from('ec2_instances')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+        
+      // Ensure the data matches our EC2Instance type
+      const typedInstances: EC2Instance[] = data.map(instance => ({
+        ...instance,
+        status: instance.status as "running" | "stopped" | "terminated"
+      }));
+      
+      setInstances(typedInstances);
       
       // Update stats
-      const total = instances.length;
-      const running = instances.filter(i => i.status === 'running').length;
-      const stopped = instances.filter(i => i.status === 'stopped').length;
-      const terminated = instances.filter(i => i.status === 'terminated').length;
+      const total = typedInstances.length;
+      const running = typedInstances.filter(i => i.status === 'running').length;
+      const stopped = typedInstances.filter(i => i.status === 'stopped').length;
+      const terminated = typedInstances.filter(i => i.status === 'terminated').length;
       
       setStats({
         total,
@@ -315,15 +331,13 @@ const Index = () => {
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         return (
-                          <ChartTooltipContent
-                            content={
-                              <div>
-                                <p>
-                                  CPU Usage: <span className="font-medium">{payload[0].value}%</span>
-                                </p>
-                              </div>
-                            }
-                          />
+                          <ChartTooltipContent>
+                            <div>
+                              <p>
+                                CPU Usage: <span className="font-medium">{payload[0].value}%</span>
+                              </p>
+                            </div>
+                          </ChartTooltipContent>
                         );
                       }
                       return null;
