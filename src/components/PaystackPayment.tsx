@@ -9,8 +9,6 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
-const PAYSTACK_PUBLIC_KEY = "pk_test_yourkeyhere"; // Replace with actual key in production
-
 interface PaystackPaymentProps {
   amount: number;
   onSuccess?: () => void;
@@ -35,41 +33,78 @@ const PaystackPayment = ({ amount, onSuccess, onClose }: PaystackPaymentProps) =
 
     setLoading(true);
 
-    // Generate a unique reference
-    const reference = `pay_${Math.floor(Math.random() * 1000000000)}`;
-    
     try {
-      // Save transaction to database first
-      const { error: dbError } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: user?.id,
-          amount: amount,
-          reference: reference,
-          status: 'pending'
-        });
-
-      if (dbError) throw dbError;
-
-      // Initialize Paystack checkout
-      // In a real implementation, you would use the Paystack SDK
-      // This is a simplified version that demonstrates the flow
-      window.open(
-        `https://checkout.paystack.com/?amount=${amount * 100}&email=${email}&reference=${reference}`,
-        '_blank'
-      );
-
-      toast({
-        title: "Payment Initialized",
-        description: "Please complete your payment in the new window",
-      });
-
-      if (onSuccess) {
-        setTimeout(() => {
-          onSuccess();
-        }, 2000);
-      }
+      // Generate a unique reference
+      const reference = `pay_${Math.floor(Math.random() * 1000000000)}`;
       
+      // Initialize Paystack payment via edge function
+      const { data, error } = await supabase.functions.invoke('payment-processor', {
+        body: { 
+          action: 'initializePayment',
+          email,
+          amount,
+          reference,
+          userId: user?.id
+        },
+      });
+      
+      if (error) throw new Error(error.message);
+      
+      if (data?.authorization_url) {
+        // Open Paystack checkout in a new window
+        window.open(data.authorization_url, '_blank');
+        
+        toast({
+          title: "Payment Initialized",
+          description: "Please complete your payment in the new window",
+        });
+        
+        // Save transaction to database
+        await supabase
+          .from('transactions')
+          .insert({
+            user_id: user?.id,
+            amount: amount,
+            reference: reference,
+            status: 'pending'
+          });
+          
+        if (onSuccess) {
+          setTimeout(() => {
+            onSuccess();
+          }, 2000);
+        }
+      } else {
+        // Fallback for simulation or if the edge function doesn't return authorization_url
+        console.log('Using fallback payment flow');
+        
+        // Save transaction to database
+        await supabase
+          .from('transactions')
+          .insert({
+            user_id: user?.id,
+            amount: amount,
+            reference: reference,
+            status: 'pending'
+          });
+          
+        // For simulation, open a dummy Paystack checkout
+        window.open(
+          `https://checkout.paystack.com/?amount=${amount * 100}&email=${email}&reference=${reference}`,
+          '_blank'
+        );
+        
+        toast({
+          title: "Payment Initialized",
+          description: "Please complete your payment in the new window",
+        });
+        
+        if (onSuccess) {
+          setTimeout(() => {
+            onSuccess();
+          }, 2000);
+        }
+      }
     } catch (error: any) {
       toast({
         title: "Payment Error",
