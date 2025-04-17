@@ -19,8 +19,8 @@ interface LaunchInstanceOptions {
   userData?: string;
 }
 
-// This is a simulated AWS service that would actually call AWS APIs
-// In a real implementation, you would use AWS SDK or call your backend APIs
+// This is a simulated cloud service that would actually call cloud APIs
+// In a real implementation, you would use appropriate SDK or call your backend APIs
 export const awsService = {
   // Get all instances for current user
   getInstances: async (): Promise<EC2Instance[]> => {
@@ -30,20 +30,20 @@ export const awsService = {
       .order('created_at', { ascending: false });
       
     if (error) {
-      console.error('Error fetching EC2 instances:', error);
+      console.error('Error fetching instances:', error);
       throw error;
     }
     
     return data || [];
   },
   
-  // Launch a new EC2 instance with extended options
+  // Launch a new instance with extended options
   launchInstance: async (
     name: string, 
     type: string,
     options?: LaunchInstanceOptions
   ): Promise<EC2Instance> => {
-    // In a real app, this would call AWS API to create an instance
+    // In a real app, this would call cloud API to create an instance
     const instanceId = `i-${Math.random().toString(36).substring(2, 10)}`;
     const launchTime = new Date().toISOString();
     const userId = (await supabase.auth.getUser()).data.user?.id;
@@ -52,8 +52,8 @@ export const awsService = {
       throw new Error("User not authenticated");
     }
     
-    // Prepare instance data
-    const instanceData = {
+    // Prepare instance data with type assertion to handle additional properties
+    const instanceData: any = {
       instance_id: instanceId,
       name,
       status: 'running',
@@ -90,7 +90,7 @@ export const awsService = {
       .single();
     
     if (error) {
-      console.error('Error launching EC2 instance:', error);
+      console.error('Error launching instance:', error);
       throw error;
     }
     
@@ -146,14 +146,14 @@ export const awsService = {
   
   // Terminate an instance
   terminateInstance: async (id: string): Promise<void> => {
-    // In a real app, this would call AWS API to terminate an instance
+    // In a real app, this would call cloud API to terminate an instance
     const { error } = await supabase
       .from('ec2_instances')
       .update({ status: 'terminated' })
       .eq('id', id);
     
     if (error) {
-      console.error('Error terminating EC2 instance:', error);
+      console.error('Error terminating instance:', error);
       throw error;
     }
   },

@@ -12,6 +12,9 @@ import Profile from "./pages/Profile";
 import Billing from "./pages/Billing";
 import NotFound from "./pages/NotFound";
 
+// Set the document title
+document.title = "Nubis - Cloud Management Platform";
+
 const queryClient = new QueryClient();
 
 const App = () => (

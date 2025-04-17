@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { 
   AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
   AlertDialogDescription,
   AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -131,7 +132,7 @@ const Index = () => {
       console.error('Error fetching instances:', error);
       toast({
         title: "Error",
-        description: "Failed to load EC2 instances",
+        description: "Failed to load instances",
         variant: "destructive"
       });
     } finally {
@@ -185,7 +186,7 @@ const Index = () => {
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">Cloud Console</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Nubis Cloud Console</h1>
           <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-600">
               Welcome, {profile?.full_name || user.email}
