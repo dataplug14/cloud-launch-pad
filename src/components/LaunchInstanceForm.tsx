@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -227,19 +226,28 @@ export default function LaunchInstanceForm({ onSuccess }: LaunchInstanceFormProp
               control={form.control}
               name="enableIpv6"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">Enable IPv6</FormLabel>
-                    <FormDescription>
-                      Assign an IPv6 address to this instance.
-                    </FormDescription>
+                <FormItem className="flex flex-col space-y-4">
+                  <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Enable IPv6</FormLabel>
+                      <FormDescription>
+                        Assign an IPv6 address to this instance (Additional $5/month)
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
                   </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
+                  {field.value && (
+                    <Alert>
+                      <AlertDescription>
+                        IPv6 will be enabled for this instance at an additional cost of $5 per month.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </FormItem>
               )}
             />
