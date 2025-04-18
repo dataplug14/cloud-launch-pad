@@ -10,10 +10,10 @@ import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
 import { awsService } from '@/services/awsService';
 
-// Define the form validation schema
 const instanceFormSchema = z.object({
   name: z.string().min(3, { message: "Name must be at least 3 characters." }),
   type: z.string(),
@@ -106,11 +106,11 @@ export default function LaunchInstanceForm({ onSuccess }: LaunchInstanceFormProp
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Tabs defaultValue="basic" className="w-full">
-          <TabsList className="grid grid-cols-4 mb-4">
-            <TabsTrigger value="basic">Basic</TabsTrigger>
-            <TabsTrigger value="network">Network</TabsTrigger>
-            <TabsTrigger value="access">Access</TabsTrigger>
-            <TabsTrigger value="advanced">Advanced</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="basic" className="text-sm">Basic</TabsTrigger>
+            <TabsTrigger value="network" className="text-sm">Network</TabsTrigger>
+            <TabsTrigger value="access" className="text-sm">Access</TabsTrigger>
+            <TabsTrigger value="advanced" className="text-sm">Advanced</TabsTrigger>
           </TabsList>
           
           <TabsContent value="basic" className="space-y-4">
@@ -231,7 +231,7 @@ export default function LaunchInstanceForm({ onSuccess }: LaunchInstanceFormProp
                     <div className="space-y-0.5">
                       <FormLabel className="text-base">Enable IPv6</FormLabel>
                       <FormDescription>
-                        Assign an IPv6 address to this instance (Additional $5/month)
+                        Assign an IPv6 address to this instance
                       </FormDescription>
                     </div>
                     <FormControl>
@@ -242,8 +242,8 @@ export default function LaunchInstanceForm({ onSuccess }: LaunchInstanceFormProp
                     </FormControl>
                   </div>
                   {field.value && (
-                    <Alert>
-                      <AlertDescription>
+                    <Alert variant="default" className="bg-blue-50 border-blue-200">
+                      <AlertDescription className="text-blue-700">
                         IPv6 will be enabled for this instance at an additional cost of $5 per month.
                       </AlertDescription>
                     </Alert>
@@ -251,8 +251,6 @@ export default function LaunchInstanceForm({ onSuccess }: LaunchInstanceFormProp
                 </FormItem>
               )}
             />
-            
-            {/* More network settings would go here */}
           </TabsContent>
           
           <TabsContent value="access" className="space-y-4">

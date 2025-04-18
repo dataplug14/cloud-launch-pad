@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -26,7 +25,6 @@ import InstanceDetailsExtended from '@/components/InstanceDetailsExtended';
 import LaunchInstanceForm from '@/components/LaunchInstanceForm';
 import { Database } from '@/integrations/supabase/types';
 
-// Type definition for EC2 instances
 type EC2Instance = {
   id: string;
   instance_id: string;
@@ -52,7 +50,6 @@ const Index = () => {
   const [showLaunchDialog, setShowLaunchDialog] = useState(false);
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
   
-  // Dashboard statistics
   const [stats, setStats] = useState({
     total: 0,
     running: 0,
@@ -60,14 +57,12 @@ const Index = () => {
     terminated: 0
   });
   
-  // Chart data
   const [cpuUsageData, setCpuUsageData] = useState<any[]>([]);
   
   useEffect(() => {
     if (user) {
       fetchInstances();
       
-      // Set up real-time subscription to instance changes
       const channel = supabase
         .channel('schema-db-changes')
         .on(
@@ -93,8 +88,7 @@ const Index = () => {
     try {
       setLoading(true);
       const instancesData = await awsService.getInstances();
-        
-      // Ensure the data matches our EC2Instance type
+      
       const typedInstances: EC2Instance[] = instancesData.map(instance => ({
         ...instance,
         status: instance.status as "running" | "stopped" | "terminated"
@@ -102,7 +96,6 @@ const Index = () => {
       
       setInstances(typedInstances);
       
-      // Update stats
       const total = typedInstances.length;
       const running = typedInstances.filter(i => i.status === 'running').length;
       const stopped = typedInstances.filter(i => i.status === 'stopped').length;
@@ -115,14 +108,13 @@ const Index = () => {
         terminated
       });
       
-      // Generate some dummy CPU usage data for the chart
       const now = new Date();
       const cpuData = Array.from({ length: 10 }, (_, i) => {
         const date = new Date(now);
         date.setMinutes(date.getMinutes() - (9 - i) * 30);
         return {
           timestamp: date.toLocaleTimeString(),
-          value: Math.floor(Math.random() * 60) + 10 // Random value between 10-70%
+          value: Math.floor(Math.random() * 60) + 10
         };
       });
       
@@ -166,7 +158,6 @@ const Index = () => {
     }
   };
   
-  // If auth is loading, show loading spinner
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -175,285 +166,300 @@ const Index = () => {
     );
   }
   
-  // If no user is logged in, redirect to auth page
   if (!user) {
     navigate('/auth');
     return null;
   }
 
-  // Dashboard when logged in
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">Nubis Cloud Console</h1>
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">
-              Welcome, {profile?.full_name || user.email}
-            </span>
-            <div className="flex space-x-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => navigate('/profile')}
-              >
-                Profile
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => navigate('/billing')}
-              >
-                Billing
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={signOut}
-              >
-                Logout
-              </Button>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <header className="bg-white/80 backdrop-blur-lg border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              Nubis Cloud Console
+            </h1>
+            <div className="flex items-center gap-4">
+              <span className="hidden sm:inline text-sm text-gray-600">
+                Welcome, {profile?.full_name || user.email}
+              </span>
+              <div className="flex gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => navigate('/profile')}
+                  className="hidden sm:flex"
+                >
+                  Profile
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => navigate('/billing')}
+                  className="hidden sm:flex"
+                >
+                  Billing
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={signOut}
+                >
+                  Logout
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </header>
       
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        {/* Dashboard Stats */}
-        <div className="px-4 py-6 sm:px-0">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <Card>
+      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="bg-white/50 backdrop-blur border-gray-200/50">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Total Instances
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{stats.total}</div>
+                <div className="text-2xl font-bold">{stats.total}</div>
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="bg-white/50 backdrop-blur border-gray-200/50">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-green-600">
                   Running Instances
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{stats.running}</div>
+                <div className="text-2xl font-bold text-green-600">{stats.running}</div>
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="bg-white/50 backdrop-blur border-gray-200/50">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-yellow-600">
                   Stopped Instances
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{stats.stopped}</div>
+                <div className="text-2xl font-bold text-yellow-600">{stats.stopped}</div>
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="bg-white/50 backdrop-blur border-gray-200/50">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-red-600">
                   Terminated Instances
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{stats.terminated}</div>
+                <div className="text-2xl font-bold text-red-600">{stats.terminated}</div>
               </CardContent>
             </Card>
           </div>
           
-          {/* Usage Overview Chart */}
-          <Card className="mb-6">
+          <Card className="bg-white/50 backdrop-blur border-gray-200/50">
             <CardHeader>
-              <CardTitle>Resource Usage Overview</CardTitle>
+              <CardTitle className="text-lg font-semibold">Resource Usage Overview</CardTitle>
             </CardHeader>
-            <CardContent className="h-80">
-              <ChartContainer
-                config={{
-                  cpuUsage: {
-                    label: "CPU Usage",
-                    color: "#2563eb"
-                  }
-                }}
-              >
-                <AreaChart data={cpuUsageData}>
-                  <XAxis
-                    dataKey="timestamp"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={10}
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={10}
-                    tickFormatter={(value) => `${value}%`}
-                  />
-                  <ChartTooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <ChartTooltipContent>
-                            <div>
-                              <p>
-                                CPU Usage: <span className="font-medium">{payload[0].value}%</span>
-                              </p>
-                            </div>
-                          </ChartTooltipContent>
-                        );
+            <CardContent className="p-0">
+              <div className="h-[300px] w-full p-6">
+                <ChartContainer
+                  config={{
+                    cpuUsage: {
+                      label: "CPU Usage",
+                      theme: {
+                        light: "#3b82f6",
+                        dark: "#60a5fa"
                       }
-                      return null;
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    name="cpuUsage"
-                    stroke="#2563eb"
-                    fill="url(#cpu-gradient)"
-                    strokeWidth={2}
-                  />
-                  <defs>
-                    <linearGradient id="cpu-gradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#2563eb" stopOpacity={0.4} />
-                      <stop offset="100%" stopColor="#2563eb" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                </AreaChart>
-              </ChartContainer>
+                    }
+                  }}
+                >
+                  <AreaChart data={cpuUsageData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                    <XAxis
+                      dataKey="timestamp"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={10}
+                      fontSize={12}
+                    />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={10}
+                      tickFormatter={(value) => `${value}%`}
+                      fontSize={12}
+                    />
+                    <ChartTooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <ChartTooltipContent
+                              className="bg-white/95 backdrop-blur border-gray-200/50"
+                            >
+                              <div className="px-3 py-2">
+                                <p className="text-sm font-medium">
+                                  CPU Usage: <span className="text-blue-600">{payload[0].value}%</span>
+                                </p>
+                              </div>
+                            </ChartTooltipContent>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      name="cpuUsage"
+                      strokeWidth={2}
+                      fillOpacity={0.2}
+                    />
+                    <defs>
+                      <linearGradient id="cpu-gradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.2} />
+                        <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                  </AreaChart>
+                </ChartContainer>
+              </div>
             </CardContent>
           </Card>
           
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold">Your Virtual Machines</h2>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Virtual Machines</h2>
+              <AlertDialog open={showLaunchDialog} onOpenChange={setShowLaunchDialog}>
+                <Button 
+                  onClick={() => setShowLaunchDialog(true)}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                >
+                  Launch New Instance
+                </Button>
+                <AlertDialogContent className="max-w-3xl">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Launch Virtual Machine</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Configure your new virtual machine with the options below.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  
+                  <LaunchInstanceForm onSuccess={handleLaunchFormSuccess} />
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
             
-            <AlertDialog open={showLaunchDialog} onOpenChange={setShowLaunchDialog}>
-              <Button onClick={() => setShowLaunchDialog(true)}>Launch New Instance</Button>
-              <AlertDialogContent className="max-w-3xl">
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Launch Virtual Machine</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Configure your new virtual machine with the options below.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                
-                <LaunchInstanceForm onSuccess={handleLaunchFormSuccess} />
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-          
-          <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Instance ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Launch Time</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
-                      <div className="flex justify-center">
-                        <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
-                      </div>
-                    </TableCell>
+            <Card className="bg-white/50 backdrop-blur border-gray-200/50 overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="font-medium">Instance ID</TableHead>
+                    <TableHead className="font-medium">Name</TableHead>
+                    <TableHead className="font-medium">Type</TableHead>
+                    <TableHead className="font-medium">Status</TableHead>
+                    <TableHead className="font-medium hidden md:table-cell">Location</TableHead>
+                    <TableHead className="font-medium hidden lg:table-cell">Launch Time</TableHead>
+                    <TableHead className="font-medium text-right">Actions</TableHead>
                   </TableRow>
-                ) : instances.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
-                      No instances found. Launch your first instance to get started.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  instances.map((instance) => (
-                    <TableRow key={instance.id}>
-                      <TableCell>
-                        <button 
-                          onClick={() => setSelectedInstanceId(instance.id)}
-                          className="text-blue-600 hover:underline"
-                        >
-                          {instance.instance_id}
-                        </button>
-                      </TableCell>
-                      <TableCell>{instance.name}</TableCell>
-                      <TableCell>{instance.type}</TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          instance.status === 'running' ? 'bg-green-100 text-green-800' :
-                          instance.status === 'stopped' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {instance.status}
-                        </span>
-                      </TableCell>
-                      <TableCell>{instance.location || 'us-east-1'}</TableCell>
-                      <TableCell>
-                        {new Date(instance.launch_time).toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        {instance.status !== 'terminated' && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="destructive" size="sm">
-                                Terminate
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Terminate Instance</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to terminate this instance? This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => terminateInstance(instance.id)}
-                                >
-                                  Terminate
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="h-24 text-center">
+                        <div className="flex justify-center">
+                          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-600"></div>
+                        </div>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </Card>
-          
-          {/* Instance Details Sheet */}
-          <Sheet 
-            open={selectedInstanceId !== null} 
-            onOpenChange={(open) => {
-              if (!open) setSelectedInstanceId(null);
-            }}
-          >
-            <SheetContent side="right" className="sm:max-w-2xl w-[95vw]">
-              {selectedInstanceId && (
-                <InstanceDetailsExtended 
-                  instanceId={selectedInstanceId}
-                  onClose={() => setSelectedInstanceId(null)}
-                  onTerminate={terminateInstance}
-                />
-              )}
-            </SheetContent>
-          </Sheet>
+                  ) : instances.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                        No instances found. Launch your first instance to get started.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    instances.map((instance) => (
+                      <TableRow key={instance.id} className="hover:bg-white/50">
+                        <TableCell>
+                          <button 
+                            onClick={() => setSelectedInstanceId(instance.id)}
+                            className="text-blue-600 hover:text-blue-700 hover:underline"
+                          >
+                            {instance.instance_id}
+                          </button>
+                        </TableCell>
+                        <TableCell>{instance.name}</TableCell>
+                        <TableCell className="font-mono text-sm">{instance.type}</TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            instance.status === 'running' ? 'bg-green-100 text-green-800' :
+                            instance.status === 'stopped' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {instance.status}
+                          </span>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">{instance.location || 'us-east-1'}</TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          {new Date(instance.launch_time).toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {instance.status !== 'terminated' && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                                  Terminate
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Terminate Instance</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to terminate this instance? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction 
+                                    onClick={() => terminateInstance(instance.id)}
+                                  >
+                                    Terminate
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </Card>
+          </div>
         </div>
       </main>
+      
+      <Sheet 
+        open={selectedInstanceId !== null} 
+        onOpenChange={(open) => {
+          if (!open) setSelectedInstanceId(null);
+        }}
+      >
+        <SheetContent side="right" className="sm:max-w-2xl w-[95vw]">
+          {selectedInstanceId && (
+            <InstanceDetailsExtended 
+              instanceId={selectedInstanceId}
+              onClose={() => setSelectedInstanceId(null)}
+              onTerminate={terminateInstance}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
