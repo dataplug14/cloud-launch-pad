@@ -95,6 +95,13 @@ async function handleListInstances(usingRealCredentials: boolean) {
         type: instance.InstanceType,
         launch_time: instance.LaunchTime,
         location: instance.Placement?.AvailabilityZone,
+        cpu: getCpuCount(instance.InstanceType || ''),
+        memory: getMemorySize(instance.InstanceType || ''),
+        storage: 20, // Default value
+        ipv6_enabled: false, // Default value
+        username: 'admin', // Default value
+        ssh_enabled: false, // Default value
+        password_set: false, // Default value
       }))
     )
   } else {
@@ -102,6 +109,33 @@ async function handleListInstances(usingRealCredentials: boolean) {
     console.log('Using simulation for listInstances: AWS credentials not configured')
     return { message: 'Using simulated data: AWS credentials not configured' }
   }
+}
+
+// Helper functions to get CPU and memory from instance type
+function getCpuCount(instanceType: string): number {
+  // Simple mapping of instance types to vCPU count
+  const cpuMap: Record<string, number> = {
+    't2.micro': 1,
+    't2.small': 1,
+    't2.medium': 2,
+    't2.large': 2,
+    'c5.large': 2,
+    'r5.large': 2
+  }
+  return cpuMap[instanceType] || 1
+}
+
+function getMemorySize(instanceType: string): number {
+  // Simple mapping of instance types to memory size in GB
+  const memoryMap: Record<string, number> = {
+    't2.micro': 1,
+    't2.small': 2,
+    't2.medium': 4,
+    't2.large': 8,
+    'c5.large': 4,
+    'r5.large': 16
+  }
+  return memoryMap[instanceType] || 1
 }
 
 async function handleLaunchInstance(params: any, usingRealCredentials: boolean) {
@@ -152,14 +186,41 @@ async function handleLaunchInstance(params: any, usingRealCredentials: boolean) 
       launch_time: instance.LaunchTime.toISOString(),
       location: instance.Placement?.AvailabilityZone,
       storage: options?.storage || 20,
+      cpu: getCpuCount(instance.InstanceType || ''),
+      memory: getMemorySize(instance.InstanceType || ''),
       ipv6_enabled: options?.enableIpv6 || false,
       username: options?.username || 'admin',
+      password_set: options?.password ? true : false,
       ssh_enabled: options?.enableSsh || false,
+      ssh_key_set: (options?.enableSsh && options?.sshKey) ? true : false,
+      user_data: options?.userData || null
     }
   } else {
-    // For demonstration, return a message indicating simulation
+    // For demonstration, create a simulated instance
     console.log('Using simulation for launchInstance: AWS credentials not configured')
-    return { message: 'Using simulated data: AWS credentials not configured' }
+    
+    const instanceId = `i-${Math.random().toString(36).substring(2, 10)}`
+    const launchTime = new Date().toISOString()
+    
+    // Return complete simulated instance data
+    return {
+      id: instanceId,
+      instance_id: instanceId,
+      name: name,
+      status: 'running',
+      type: type,
+      launch_time: launchTime,
+      location: options?.location || 'us-east-1a',
+      storage: options?.storage || 20,
+      cpu: getCpuCount(type),
+      memory: getMemorySize(type),
+      ipv6_enabled: options?.enableIpv6 || false,
+      username: options?.username || 'admin',
+      password_set: options?.password ? true : false,
+      ssh_enabled: options?.enableSsh || false,
+      ssh_key_set: (options?.enableSsh && options?.sshKey) ? true : false,
+      user_data: options?.userData || null
+    }
   }
 }
 
@@ -275,9 +336,29 @@ async function handleGetInstanceStats(params: any, usingRealCredentials: boolean
       memory_usage: Math.random() * 100, // Placeholder, would need CloudWatch agent for real data
     }))
   } else {
-    // For demonstration, return a message indicating simulation
+    // For demonstration, create simulated stats
     console.log('Using simulation for getInstanceStats: AWS credentials not configured')
-    return { message: 'Using simulated data: AWS credentials not configured' }
+    
+    const now = new Date();
+    const stats = [];
+    
+    // Generate 24 hours of data at hourly intervals
+    for (let i = 0; i < 24; i++) {
+      const timestamp = new Date(now);
+      timestamp.setHours(now.getHours() - (23 - i));
+      
+      stats.push({
+        id: crypto.randomUUID(),
+        instance_id: instanceId,
+        timestamp: timestamp.toISOString(),
+        cpu_usage: Math.random() * 80 + 5, // 5-85%
+        memory_usage: Math.random() * 70 + 10, // 10-80%
+        network_in: Math.random() * 5000, // KB
+        network_out: Math.random() * 3000, // KB
+      });
+    }
+    
+    return stats;
   }
 }
 

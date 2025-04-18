@@ -2,7 +2,19 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 
-type EC2Instance = Database['public']['Tables']['ec2_instances']['Row'];
+type EC2Instance = Database['public']['Tables']['ec2_instances']['Row'] & {
+  storage?: number;
+  cpu?: number;
+  memory?: number;
+  location?: string;
+  ipv6_enabled?: boolean;
+  username?: string;
+  password_set?: boolean;
+  ssh_enabled?: boolean;
+  ssh_key_set?: boolean;
+  user_data?: string | null;
+};
+
 type UsageStatistic = Database['public']['Tables']['usage_statistics']['Row'];
 
 // Extended launch options interface
@@ -92,6 +104,25 @@ export const awsService = {
         throw new Error("User not authenticated");
       }
       
+      // Map instance types to CPU and memory values
+      const cpuMap: Record<string, number> = {
+        't2.micro': 1,
+        't2.small': 1,
+        't2.medium': 2,
+        't2.large': 2,
+        'c5.large': 2,
+        'r5.large': 2
+      };
+      
+      const memoryMap: Record<string, number> = {
+        't2.micro': 1,
+        't2.small': 2,
+        't2.medium': 4,
+        't2.large': 8,
+        'c5.large': 4,
+        'r5.large': 16
+      };
+      
       // Prepare instance data with type assertion to handle additional properties
       const instanceData: any = {
         instance_id: instanceId,
@@ -101,9 +132,9 @@ export const awsService = {
         launch_time: launchTime,
         user_id: userId,
         storage: options?.storage || 20,
-        cpu: options?.cpu || 1,
-        memory: options?.memory || 1,
-        location: options?.location || 'us-east-1',
+        cpu: options?.cpu || cpuMap[type] || 1,
+        memory: options?.memory || memoryMap[type] || 1,
+        location: options?.location || 'us-east-1a',
         ipv6_enabled: options?.enableIpv6 || false,
         username: options?.username || 'admin',
         ssh_enabled: options?.enableSsh || false,
