@@ -11,37 +11,67 @@ export type Database = {
     Tables: {
       ec2_instances: {
         Row: {
+          cpu: number | null
           created_at: string | null
           id: string
           instance_id: string
+          ipv6_enabled: boolean | null
           launch_time: string
+          location: string | null
+          memory: number | null
           name: string
+          password_set: boolean | null
+          ssh_enabled: boolean | null
+          ssh_key_set: boolean | null
           status: string
+          storage: number | null
           type: string
           updated_at: string | null
+          user_data: string | null
           user_id: string | null
+          username: string | null
         }
         Insert: {
+          cpu?: number | null
           created_at?: string | null
           id?: string
           instance_id: string
+          ipv6_enabled?: boolean | null
           launch_time: string
+          location?: string | null
+          memory?: number | null
           name: string
+          password_set?: boolean | null
+          ssh_enabled?: boolean | null
+          ssh_key_set?: boolean | null
           status: string
+          storage?: number | null
           type: string
           updated_at?: string | null
+          user_data?: string | null
           user_id?: string | null
+          username?: string | null
         }
         Update: {
+          cpu?: number | null
           created_at?: string | null
           id?: string
           instance_id?: string
+          ipv6_enabled?: boolean | null
           launch_time?: string
+          location?: string | null
+          memory?: number | null
           name?: string
+          password_set?: boolean | null
+          ssh_enabled?: boolean | null
+          ssh_key_set?: boolean | null
           status?: string
+          storage?: number | null
           type?: string
           updated_at?: string | null
+          user_data?: string | null
           user_id?: string | null
+          username?: string | null
         }
         Relationships: []
       }
