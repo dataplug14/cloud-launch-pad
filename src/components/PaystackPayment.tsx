@@ -10,16 +10,35 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 interface PaystackPaymentProps {
-  amount: number;
+  amount?: number;
   onSuccess?: () => void;
   onClose?: () => void;
 }
 
-const PaystackPayment = ({ amount, onSuccess, onClose }: PaystackPaymentProps) => {
+const PaystackPayment = ({ amount: initialAmount, onSuccess, onClose }: PaystackPaymentProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
+  const [customAmount, setCustomAmount] = useState(initialAmount?.toString() || '');
   const [loading, setLoading] = useState(false);
+
+  const validateAmount = (value: string) => {
+    const numValue = Number(value);
+    if (isNaN(numValue) || numValue < 100) {
+      toast({
+        title: "Invalid Amount",
+        description: "Minimum amount is NGN 100",
+        variant: "destructive"
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9]/g, '');
+    setCustomAmount(value);
+  };
 
   const initializePayment = async () => {
     if (!email) {
@@ -31,18 +50,21 @@ const PaystackPayment = ({ amount, onSuccess, onClose }: PaystackPaymentProps) =
       return;
     }
 
+    if (!validateAmount(customAmount)) {
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Generate a unique reference
+      const finalAmount = Number(customAmount);
       const reference = `pay_${Math.floor(Math.random() * 1000000000)}`;
       
-      // Initialize Paystack payment via edge function
       const { data, error } = await supabase.functions.invoke('payment-processor', {
         body: { 
           action: 'initializePayment',
           email,
-          amount,
+          amount: finalAmount,
           reference,
           userId: user?.id
         },
@@ -51,7 +73,6 @@ const PaystackPayment = ({ amount, onSuccess, onClose }: PaystackPaymentProps) =
       if (error) throw new Error(error.message);
       
       if (data?.authorization_url) {
-        // Open Paystack checkout in a new window
         window.open(data.authorization_url, '_blank');
         
         toast({
@@ -59,46 +80,15 @@ const PaystackPayment = ({ amount, onSuccess, onClose }: PaystackPaymentProps) =
           description: "Please complete your payment in the new window",
         });
         
-        // Save transaction to database
         await supabase
           .from('transactions')
           .insert({
             user_id: user?.id,
-            amount: amount,
+            amount: finalAmount,
             reference: reference,
             status: 'pending'
           });
           
-        if (onSuccess) {
-          setTimeout(() => {
-            onSuccess();
-          }, 2000);
-        }
-      } else {
-        // Fallback for simulation or if the edge function doesn't return authorization_url
-        console.log('Using fallback payment flow');
-        
-        // Save transaction to database
-        await supabase
-          .from('transactions')
-          .insert({
-            user_id: user?.id,
-            amount: amount,
-            reference: reference,
-            status: 'pending'
-          });
-          
-        // For simulation, open a dummy Paystack checkout
-        window.open(
-          `https://checkout.paystack.com/?amount=${amount * 100}&email=${email}&reference=${reference}`,
-          '_blank'
-        );
-        
-        toast({
-          title: "Payment Initialized",
-          description: "Please complete your payment in the new window",
-        });
-        
         if (onSuccess) {
           setTimeout(() => {
             onSuccess();
@@ -137,10 +127,18 @@ const PaystackPayment = ({ amount, onSuccess, onClose }: PaystackPaymentProps) =
             />
           </div>
           <div className="space-y-2">
-            <Label>Amount</Label>
-            <div className="rounded-md border p-4 text-center font-semibold">
-              NGN {amount.toLocaleString()}
-            </div>
+            <Label htmlFor="amount">Amount (NGN)</Label>
+            <Input
+              id="amount"
+              type="text"
+              placeholder="Enter amount (minimum NGN 100)"
+              value={customAmount}
+              onChange={handleAmountChange}
+              min="100"
+            />
+            <p className="text-sm text-muted-foreground">
+              Minimum amount: NGN 100
+            </p>
           </div>
         </div>
       </CardContent>

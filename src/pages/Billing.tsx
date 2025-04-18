@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -47,6 +46,10 @@ const Billing = () => {
   const handlePaymentSuccess = () => {
     setAddingFunds(false);
     fetchTransactions();
+  };
+  
+  const handleContactSales = () => {
+    window.location.href = 'mailto:hello@usenubis.xyz';
   };
   
   return (
@@ -243,7 +246,9 @@ const Billing = () => {
                 </ul>
               </CardContent>
               <CardFooter>
-                <Button variant="outline" className="w-full">Upgrade</Button>
+                <Button variant="outline" className="w-full" onClick={() => setAddingFunds(true)}>
+                  Upgrade
+                </Button>
               </CardFooter>
             </Card>
             
@@ -278,7 +283,9 @@ const Billing = () => {
                 </ul>
               </CardContent>
               <CardFooter>
-                <Button variant="outline" className="w-full">Contact Sales</Button>
+                <Button variant="outline" className="w-full" onClick={handleContactSales}>
+                  Contact Sales
+                </Button>
               </CardFooter>
             </Card>
           </div>
