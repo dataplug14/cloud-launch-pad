@@ -36,27 +36,30 @@ export const awsService = {
   // Get all instances for current user
   getInstances: async (): Promise<EC2Instance[]> => {
     try {
+      console.log('Attempting to get instances via edge function...');
       // First try to get instances from the real cloud provider via edge function
       const { data: cloudInstances, error } = await supabase.functions.invoke('cloud-manager', {
         body: { action: 'listInstances' },
       });
       
       if (!error && cloudInstances) {
+        console.log('Successfully retrieved instances from edge function:', cloudInstances);
         return cloudInstances;
       }
       
       // Fallback to database if edge function fails
-      console.log('Falling back to database for instances');
+      console.log('Falling back to database for instances, edge function error:', error);
       const { data, error: dbError } = await supabase
         .from('ec2_instances')
         .select('*')
         .order('created_at', { ascending: false });
         
       if (dbError) {
-        console.error('Error fetching instances:', dbError);
+        console.error('Error fetching instances from database:', dbError);
         throw dbError;
       }
       
+      console.log('Successfully retrieved instances from database:', data);
       return data || [];
     } catch (err) {
       console.error('Error in getInstances:', err);

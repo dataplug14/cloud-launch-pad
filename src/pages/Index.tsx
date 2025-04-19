@@ -23,6 +23,7 @@ import { awsService } from '@/services/awsService';
 import { supabase } from '@/integrations/supabase/client';
 import InstanceDetailsExtended from '@/components/InstanceDetailsExtended';
 import LaunchInstanceForm from '@/components/LaunchInstanceForm';
+import { SideNavigation } from '@/components/Sidebar';
 import { Database } from '@/integrations/supabase/types';
 
 type EC2Instance = {
@@ -42,7 +43,7 @@ type EC2Instance = {
 };
 
 const Index = () => {
-  const { user, profile, signOut, isLoading: authLoading } = useAuth();
+  const { user, profile, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   
   const [loading, setLoading] = useState(true);
@@ -73,6 +74,7 @@ const Index = () => {
             table: 'ec2_instances'
           },
           (payload) => {
+            console.log('DB change detected:', payload);
             fetchInstances();
           }
         )
@@ -87,7 +89,9 @@ const Index = () => {
   const fetchInstances = async () => {
     try {
       setLoading(true);
+      console.log('Fetching instances...');
       const instancesData = await awsService.getInstances();
+      console.log('Instances data received:', instancesData);
       
       const typedInstances: EC2Instance[] = instancesData.map(instance => ({
         ...instance,
@@ -172,49 +176,11 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <header className="bg-white/80 backdrop-blur-lg border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              Nubis Cloud Console
-            </h1>
-            <div className="flex items-center gap-4">
-              <span className="hidden sm:inline text-sm text-gray-600">
-                Welcome, {profile?.full_name || user.email}
-              </span>
-              <div className="flex gap-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => navigate('/profile')}
-                  className="hidden sm:flex"
-                >
-                  Profile
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => navigate('/billing')}
-                  className="hidden sm:flex"
-                >
-                  Billing
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={signOut}
-                >
-                  Logout
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
+      <SideNavigation />
       
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <div className="space-y-6">
+      <main className="flex-1 p-6">
+        <div className="space-y-6 max-w-7xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card className="bg-white/50 backdrop-blur border-gray-200/50">
               <CardHeader className="pb-2">
@@ -334,12 +300,13 @@ const Index = () => {
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Virtual Machines</h2>
               <AlertDialog open={showLaunchDialog} onOpenChange={setShowLaunchDialog}>
-                <Button 
-                  onClick={() => setShowLaunchDialog(true)}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                >
-                  Launch New Instance
-                </Button>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                  >
+                    Launch New Instance
+                  </Button>
+                </AlertDialogTrigger>
                 <AlertDialogContent className="max-w-3xl">
                   <AlertDialogHeader>
                     <AlertDialogTitle>Launch Virtual Machine</AlertDialogTitle>

@@ -13,7 +13,7 @@ import Billing from "./pages/Billing";
 import NotFound from "./pages/NotFound";
 
 // Set the document title
-document.title = "Nubis - Cloud Management Platform";
+document.title = "Nubis";
 
 const queryClient = new QueryClient({
   defaultOptions: {
