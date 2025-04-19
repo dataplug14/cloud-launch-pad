@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -62,10 +61,15 @@ const Index = () => {
   
   const [cpuUsageData, setCpuUsageData] = useState<any[]>([]);
   
+  const [instanceLoadError, setInstanceLoadError] = useState<string | null>(null);
+
   useEffect(() => {
     if (user) {
-      console.log('User authenticated, fetching instances...');
-      fetchInstances();
+      console.log('User authenticated, attempting to fetch instances...');
+      fetchInstances().catch(error => {
+        console.error('Failed to fetch instances:', error);
+        setInstanceLoadError('Unable to load instances. Please check your connection or try again.');
+      });
       
       // Set up realtime subscription for database changes
       const channel = supabase
@@ -100,26 +104,15 @@ const Index = () => {
   const fetchInstances = async () => {
     try {
       setLoading(true);
-      console.log('Fetching instances, attempt #', fetchAttempts + 1);
+      setInstanceLoadError(null);
       
       const instancesData = await awsService.getInstances();
       console.log('Instances data received:', instancesData);
       
       if (!instancesData || instancesData.length === 0) {
-        console.log('No instances found or empty response');
-        // If we don't have instances, let's try again after a short delay
-        if (fetchAttempts < 3) {
-          setTimeout(() => {
-            setFetchAttempts(prev => prev + 1);
-            fetchInstances();
-          }, 3000);
-        } else {
-          console.log('Max fetch attempts reached, giving up');
-          toast({
-            title: "No instances found",
-            description: "Try launching a new instance or contact support if you believe this is an error.",
-          });
-        }
+        console.warn('No instances found or empty response');
+        setInstances([]);
+        return;
       }
       
       const typedInstances: EC2Instance[] = Array.isArray(instancesData) 
@@ -160,12 +153,8 @@ const Index = () => {
       }
       
     } catch (error) {
-      console.error('Error fetching instances:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load instances. Please try again later.",
-        variant: "destructive"
-      });
+      console.error('Comprehensive instance fetch error:', error);
+      setInstanceLoadError('Failed to retrieve instances. Please check your AWS configuration.');
     } finally {
       setLoading(false);
       setFetchAttempts(prev => prev + 1);
@@ -233,6 +222,21 @@ const Index = () => {
   if (!user) {
     navigate('/auth');
     return null;
+  }
+
+  if (instanceLoadError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-red-600 mb-4">
+            {instanceLoadError}
+          </h2>
+          <Button onClick={fetchInstances} variant="outline">
+            Retry Loading Instances
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (

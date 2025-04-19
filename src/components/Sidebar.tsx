@@ -26,7 +26,7 @@ export const SideNavigation = () => {
         <Sidebar className="border-r border-gray-200">
           <SidebarHeader className="pb-0">
             <div className="px-3 py-4">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              <h1 className="text-2xl font-bold text-primary">
                 Nubis
               </h1>
             </div>
