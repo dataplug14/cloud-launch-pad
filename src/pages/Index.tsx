@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -66,10 +67,15 @@ const Index = () => {
   useEffect(() => {
     if (user) {
       console.log('User authenticated, attempting to fetch instances...');
-      fetchInstances().catch(error => {
-        console.error('Failed to fetch instances:', error);
-        setInstanceLoadError('Unable to load instances. Please check your connection or try again.');
-      });
+      console.log('Current user:', user);
+      
+      // Add a small delay to allow AWS connection to initialize
+      setTimeout(() => {
+        fetchInstances().catch(error => {
+          console.error('Failed to fetch instances:', error);
+          setInstanceLoadError('Unable to load instances. Please check your connection or try again.');
+        });
+      }, 1000);
       
       // Set up realtime subscription for database changes
       const channel = supabase
@@ -105,14 +111,29 @@ const Index = () => {
     try {
       setLoading(true);
       setInstanceLoadError(null);
+      console.log('Fetching instances attempt #', fetchAttempts + 1);
+      
+      // Log the user's authentication status
+      console.log('Fetching with user ID:', user?.id);
       
       const instancesData = await awsService.getInstances();
       console.log('Instances data received:', instancesData);
       
       if (!instancesData || instancesData.length === 0) {
         console.warn('No instances found or empty response');
-        setInstances([]);
-        return;
+        
+        // If we've made fewer than 3 attempts, try again after a delay
+        if (fetchAttempts < 3) {
+          console.log(`No instances found on attempt ${fetchAttempts + 1}, will retry...`);
+          setTimeout(() => {
+            setFetchAttempts(prev => prev + 1);
+            fetchInstances();
+          }, 3000);
+          return;
+        } else {
+          console.log('Max fetch attempts reached. No instances found.');
+          setInstances([]);
+        }
       }
       
       const typedInstances: EC2Instance[] = Array.isArray(instancesData) 
@@ -154,6 +175,10 @@ const Index = () => {
       
     } catch (error) {
       console.error('Comprehensive instance fetch error:', error);
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
       setInstanceLoadError('Failed to retrieve instances. Please check your AWS configuration.');
     } finally {
       setLoading(false);

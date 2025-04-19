@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, User, CreditCard, Home, Menu } from 'lucide-react';
+import { Home, User, CreditCard, LogOut } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -12,8 +12,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger
+  SidebarProvider
 } from "@/components/ui/sidebar";
 
 export const SideNavigation = () => {
@@ -23,10 +22,10 @@ export const SideNavigation = () => {
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="flex h-full">
-        <Sidebar className="border-r border-gray-200">
+        <Sidebar className="border-r border-gray-200 bg-white">
           <SidebarHeader className="pb-0">
-            <div className="px-3 py-4">
-              <h1 className="text-2xl font-bold text-primary">
+            <div className="px-4 py-5">
+              <h1 className="text-2xl font-bold">
                 Nubis
               </h1>
             </div>
@@ -38,6 +37,7 @@ export const SideNavigation = () => {
                 <SidebarMenuButton 
                   onClick={() => navigate('/')}
                   tooltip="Dashboard"
+                  className="py-3"
                 >
                   <Home className="h-5 w-5" />
                   <span>Dashboard</span>
@@ -48,6 +48,7 @@ export const SideNavigation = () => {
                 <SidebarMenuButton 
                   onClick={() => navigate('/profile')}
                   tooltip="Profile"
+                  className="py-3"
                 >
                   <User className="h-5 w-5" />
                   <span>Profile</span>
@@ -58,6 +59,7 @@ export const SideNavigation = () => {
                 <SidebarMenuButton 
                   onClick={() => navigate('/billing')}
                   tooltip="Billing"
+                  className="py-3"
                 >
                   <CreditCard className="h-5 w-5" />
                   <span>Billing</span>
@@ -67,7 +69,7 @@ export const SideNavigation = () => {
           </SidebarContent>
           
           <SidebarFooter>
-            <div className="px-3 py-2">
+            <div className="px-3 py-4 border-t border-gray-200">
               {user && (
                 <div className="text-sm text-gray-600 mb-2">
                   {profile?.full_name || user.email}
@@ -87,9 +89,7 @@ export const SideNavigation = () => {
         </Sidebar>
         
         <div className="flex-1">
-          <div className="p-4 flex items-center">
-            <SidebarTrigger />
-          </div>
+          {/* Main content will be rendered here by the router */}
         </div>
       </div>
     </SidebarProvider>
