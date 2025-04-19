@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, User, CreditCard, Home } from 'lucide-react';
+import { LogOut, User, CreditCard, Home, Menu } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -25,8 +25,8 @@ export const SideNavigation = () => {
       <div className="flex h-full">
         <Sidebar className="border-r border-gray-200">
           <SidebarHeader className="pb-0">
-            <div className="px-3 py-2">
-              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <div className="px-3 py-4">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                 Nubis
               </h1>
             </div>

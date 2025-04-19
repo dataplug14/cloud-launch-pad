@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,7 @@ const Index = () => {
   const [instances, setInstances] = useState<EC2Instance[]>([]);
   const [showLaunchDialog, setShowLaunchDialog] = useState(false);
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
+  const [fetchAttempts, setFetchAttempts] = useState(0);
   
   const [stats, setStats] = useState({
     total: 0,
@@ -62,8 +64,10 @@ const Index = () => {
   
   useEffect(() => {
     if (user) {
+      console.log('User authenticated, fetching instances...');
       fetchInstances();
       
+      // Set up realtime subscription for database changes
       const channel = supabase
         .channel('schema-db-changes')
         .on(
@@ -80,8 +84,15 @@ const Index = () => {
         )
         .subscribe();
         
+      // Set an interval to periodically refresh instances
+      const refreshInterval = setInterval(() => {
+        console.log('Refreshing instances...');
+        fetchInstances();
+      }, 30000); // Refresh every 30 seconds
+        
       return () => {
         supabase.removeChannel(channel);
+        clearInterval(refreshInterval);
       };
     }
   }, [user]);
@@ -89,15 +100,36 @@ const Index = () => {
   const fetchInstances = async () => {
     try {
       setLoading(true);
-      console.log('Fetching instances...');
+      console.log('Fetching instances, attempt #', fetchAttempts + 1);
+      
       const instancesData = await awsService.getInstances();
       console.log('Instances data received:', instancesData);
       
-      const typedInstances: EC2Instance[] = instancesData.map(instance => ({
-        ...instance,
-        status: instance.status as "running" | "stopped" | "terminated"
-      }));
+      if (!instancesData || instancesData.length === 0) {
+        console.log('No instances found or empty response');
+        // If we don't have instances, let's try again after a short delay
+        if (fetchAttempts < 3) {
+          setTimeout(() => {
+            setFetchAttempts(prev => prev + 1);
+            fetchInstances();
+          }, 3000);
+        } else {
+          console.log('Max fetch attempts reached, giving up');
+          toast({
+            title: "No instances found",
+            description: "Try launching a new instance or contact support if you believe this is an error.",
+          });
+        }
+      }
       
+      const typedInstances: EC2Instance[] = Array.isArray(instancesData) 
+        ? instancesData.map(instance => ({
+            ...instance,
+            status: instance.status as "running" | "stopped" | "terminated"
+          }))
+        : [];
+      
+      console.log('Processed instances:', typedInstances);
       setInstances(typedInstances);
       
       const total = typedInstances.length;
@@ -112,38 +144,51 @@ const Index = () => {
         terminated
       });
       
-      const now = new Date();
-      const cpuData = Array.from({ length: 10 }, (_, i) => {
-        const date = new Date(now);
-        date.setMinutes(date.getMinutes() - (9 - i) * 30);
-        return {
-          timestamp: date.toLocaleTimeString(),
-          value: Math.floor(Math.random() * 60) + 10
-        };
-      });
-      
-      setCpuUsageData(cpuData);
+      // Generate some dummy CPU usage data if we have instances
+      if (typedInstances.length > 0) {
+        const now = new Date();
+        const cpuData = Array.from({ length: 10 }, (_, i) => {
+          const date = new Date(now);
+          date.setMinutes(date.getMinutes() - (9 - i) * 30);
+          return {
+            timestamp: date.toLocaleTimeString(),
+            value: Math.floor(Math.random() * 60) + 10
+          };
+        });
+        
+        setCpuUsageData(cpuData);
+      }
       
     } catch (error) {
       console.error('Error fetching instances:', error);
       toast({
         title: "Error",
-        description: "Failed to load instances",
+        description: "Failed to load instances. Please try again later.",
         variant: "destructive"
       });
     } finally {
       setLoading(false);
+      setFetchAttempts(prev => prev + 1);
     }
   };
 
   const handleLaunchFormSuccess = () => {
+    console.log('Launch form success, refreshing instances...');
     setShowLaunchDialog(false);
+    setFetchAttempts(0); // Reset fetch attempts
     fetchInstances();
+    
+    // Show success message
+    toast({
+      title: "Instance Launched",
+      description: "Your new instance is being created. It may take a few moments to appear on the dashboard.",
+    });
   };
 
   const terminateInstance = async (instanceId: string) => {
     try {
       setLoading(true);
+      console.log('Terminating instance:', instanceId);
       await awsService.terminateInstance(instanceId);
       
       toast({
@@ -151,7 +196,11 @@ const Index = () => {
         description: `EC2 instance has been terminated`,
       });
       
+      // Refresh instances after termination
+      fetchInstances();
+      
     } catch (error: any) {
+      console.error('Error terminating instance:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to terminate instance",
@@ -160,6 +209,17 @@ const Index = () => {
     } finally {
       setLoading(false);
     }
+  };
+  
+  const retryFetchInstances = () => {
+    console.log('Manually retrying instance fetch...');
+    setFetchAttempts(0);
+    fetchInstances();
+    
+    toast({
+      title: "Refreshing",
+      description: "Refreshing instance data...",
+    });
   };
   
   if (authLoading) {
@@ -181,6 +241,13 @@ const Index = () => {
       
       <main className="flex-1 p-6">
         <div className="space-y-6 max-w-7xl mx-auto">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold">Dashboard</h1>
+            <Button onClick={retryFetchInstances} variant="outline" size="sm">
+              Refresh Data
+            </Button>
+          </div>
+          
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card className="bg-white/50 backdrop-blur border-gray-200/50">
               <CardHeader className="pb-2">
@@ -227,74 +294,76 @@ const Index = () => {
             </Card>
           </div>
           
-          <Card className="bg-white/50 backdrop-blur border-gray-200/50">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold">Resource Usage Overview</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="h-[300px] w-full p-6">
-                <ChartContainer
-                  config={{
-                    cpuUsage: {
-                      label: "CPU Usage",
-                      theme: {
-                        light: "#3b82f6",
-                        dark: "#60a5fa"
-                      }
-                    }
-                  }}
-                >
-                  <AreaChart data={cpuUsageData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                    <XAxis
-                      dataKey="timestamp"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={10}
-                      fontSize={12}
-                    />
-                    <YAxis
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={10}
-                      tickFormatter={(value) => `${value}%`}
-                      fontSize={12}
-                    />
-                    <ChartTooltip
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          return (
-                            <ChartTooltipContent
-                              className="bg-white/95 backdrop-blur border-gray-200/50"
-                            >
-                              <div className="px-3 py-2">
-                                <p className="text-sm font-medium">
-                                  CPU Usage: <span className="text-blue-600">{payload[0].value}%</span>
-                                </p>
-                              </div>
-                            </ChartTooltipContent>
-                          );
+          {stats.total > 0 && (
+            <Card className="bg-white/50 backdrop-blur border-gray-200/50">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold">Resource Usage Overview</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="h-[300px] w-full p-6">
+                  <ChartContainer
+                    config={{
+                      cpuUsage: {
+                        label: "CPU Usage",
+                        theme: {
+                          light: "#3b82f6",
+                          dark: "#60a5fa"
                         }
-                        return null;
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="value"
-                      name="cpuUsage"
-                      strokeWidth={2}
-                      fillOpacity={0.2}
-                    />
-                    <defs>
-                      <linearGradient id="cpu-gradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.2} />
-                        <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                  </AreaChart>
-                </ChartContainer>
-              </div>
-            </CardContent>
-          </Card>
+                      }
+                    }}
+                  >
+                    <AreaChart data={cpuUsageData} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                      <XAxis
+                        dataKey="timestamp"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={10}
+                        fontSize={12}
+                      />
+                      <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={10}
+                        tickFormatter={(value) => `${value}%`}
+                        fontSize={12}
+                      />
+                      <ChartTooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <ChartTooltipContent
+                                className="bg-white/95 backdrop-blur border-gray-200/50"
+                              >
+                                <div className="px-3 py-2">
+                                  <p className="text-sm font-medium">
+                                    CPU Usage: <span className="text-blue-600">{payload[0].value}%</span>
+                                  </p>
+                                </div>
+                              </ChartTooltipContent>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="value"
+                        name="cpuUsage"
+                        strokeWidth={2}
+                        fillOpacity={0.2}
+                      />
+                      <defs>
+                        <linearGradient id="cpu-gradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.2} />
+                          <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                    </AreaChart>
+                  </ChartContainer>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           
           <div className="space-y-4">
             <div className="flex justify-between items-center">
