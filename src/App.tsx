@@ -10,6 +10,8 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import Billing from "./pages/Billing";
+import VirtualMachines from "./pages/VirtualMachines";
+import CreateVM from "./pages/CreateVM";
 import NotFound from "./pages/NotFound";
 
 // Set the document title
@@ -47,6 +49,16 @@ const App = () => (
               <Route path="/billing" element={
                 <ProtectedRoute>
                   <Billing />
+                </ProtectedRoute>
+              } />
+              <Route path="/virtual-machines" element={
+                <ProtectedRoute>
+                  <VirtualMachines />
+                </ProtectedRoute>
+              } />
+              <Route path="/create-vm" element={
+                <ProtectedRoute>
+                  <CreateVM />
                 </ProtectedRoute>
               } />
               <Route path="*" element={<NotFound />} />
