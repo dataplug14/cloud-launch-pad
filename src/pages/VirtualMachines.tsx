@@ -94,7 +94,7 @@ const VirtualMachines = () => {
                 <div className="space-y-2 text-gray-200">
                   <p>ID: {instance.id}</p>
                   <p>Type: {instance.type}</p>
-                  <p>Region: {instance.region}</p>
+                  <p>Region: {instance.location}</p>
                   
                   <div className="flex space-x-2 pt-4">
                     {instance.status === 'running' ? (
