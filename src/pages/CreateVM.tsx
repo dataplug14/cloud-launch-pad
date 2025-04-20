@@ -11,10 +11,11 @@ const CreateVM = () => {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  const handleLaunchFormSuccess = (instanceDetails: any) => {
+  // Fixed the type signature to match LaunchInstanceForm's expected prop type
+  const handleLaunchFormSuccess = () => {
     toast({
       title: "Instance Created",
-      description: `Your new VM ${instanceDetails.name} is being launched.`
+      description: "Your new VM is being launched."
     });
     
     navigate('/virtual-machines');

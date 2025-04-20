@@ -19,7 +19,8 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarProvider
+  SidebarProvider,
+  SidebarTrigger
 } from "@/components/ui/sidebar";
 
 export const SideNavigation = () => {
@@ -30,10 +31,13 @@ export const SideNavigation = () => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <SidebarProvider>
-      <Sidebar className="bg-white/10 backdrop-blur-lg border-r border-white/20">
+    <SidebarProvider defaultOpen={true}>
+      <Sidebar className="bg-[#1A1F2C]/90 backdrop-blur-lg border-r border-white/10 z-50">
         <SidebarHeader className="p-4 border-b border-white/10">
-          <h1 className="text-2xl font-bold text-gray-800">Nubis</h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-white">Nubis</h1>
+            <SidebarTrigger className="md:hidden text-white" />
+          </div>
         </SidebarHeader>
         
         <SidebarContent>
@@ -69,7 +73,7 @@ export const SideNavigation = () => {
                 <SidebarMenuButton 
                   onClick={() => navigate(item.path)}
                   isActive={isActive(item.path)}
-                  className="hover:bg-white/10 transition-colors"
+                  className="text-white hover:bg-white/10 transition-colors"
                 >
                   {item.icon}
                   <span>{item.label}</span>
@@ -82,13 +86,13 @@ export const SideNavigation = () => {
         <SidebarFooter className="p-4 border-t border-white/10">
           {user && (
             <div className="space-y-2">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-white/80">
                 {profile?.full_name || user.email}
               </div>
               <Button 
                 variant="outline" 
                 onClick={signOut}
-                className="w-full bg-white/10 backdrop-blur-lg border-white/20 text-gray-800 hover:bg-white/20"
+                className="w-full bg-white/10 backdrop-blur-lg border-white/20 text-white hover:bg-white/20"
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 Logout
