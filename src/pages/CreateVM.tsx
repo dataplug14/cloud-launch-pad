@@ -38,7 +38,7 @@ const CreateVM = () => {
     <div className="min-h-screen bg-gradient-to-br from-[#1A1F2C] to-[#222222] flex">
       <SideNavigation />
       
-      <main className="flex-1 p-6 overflow-auto">
+      <main className="flex-1 p-6 pl-[16rem] md:pl-64 overflow-auto">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold mb-6 text-white">Create Virtual Machine</h1>
           

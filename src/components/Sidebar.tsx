@@ -32,7 +32,7 @@ export const SideNavigation = () => {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <Sidebar className="bg-[#1A1F2C]/90 backdrop-blur-lg border-r border-white/10 z-50">
+      <Sidebar className="fixed h-screen bg-[#1A1F2C]/90 backdrop-blur-lg border-r border-white/10 z-50">
         <SidebarHeader className="p-4 border-b border-white/10">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-white">Nubis</h1>
