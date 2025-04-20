@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { 
   Card, 
   CardContent, 
@@ -17,7 +17,7 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { SideNavigation } from '@/components/Sidebar';
 import { useQuery } from '@tanstack/react-query';
-import { fetchVirtualMachines } from '@/services/awsService';
+import { awsService } from '@/services/awsService';
 
 const VirtualMachines = () => {
   const { user } = useAuth();
@@ -27,7 +27,7 @@ const VirtualMachines = () => {
     error 
   } = useQuery({
     queryKey: ['virtualMachines'],
-    queryFn: () => fetchVirtualMachines(user?.id),
+    queryFn: () => awsService.getInstances(),
     enabled: !!user
   });
 
@@ -47,7 +47,7 @@ const VirtualMachines = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[#1A1F2C] to-[#222222] flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
@@ -55,27 +55,27 @@ const VirtualMachines = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[#1A1F2C] to-[#222222] flex items-center justify-center">
         <p className="text-red-500">Error loading virtual machines</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
+    <div className="min-h-screen bg-gradient-to-br from-[#1A1F2C] to-[#222222] flex">
       <SideNavigation />
       
       <main className="flex-1 p-6 overflow-auto">
-        <h1 className="text-2xl font-bold mb-6">Virtual Machines</h1>
+        <h1 className="text-2xl font-bold mb-6 text-white">Virtual Machines</h1>
         
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {instances?.map((instance) => (
             <Card 
               key={instance.id} 
-              className="bg-white/80 backdrop-blur border border-white/20"
+              className="bg-white/5 backdrop-blur-lg border border-white/10"
             >
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-white">
                   <Server className="h-5 w-5" />
                   {instance.name}
                 </CardTitle>
@@ -91,7 +91,7 @@ const VirtualMachines = () => {
               </CardHeader>
               
               <CardContent>
-                <div className="space-y-2">
+                <div className="space-y-2 text-gray-200">
                   <p>ID: {instance.id}</p>
                   <p>Type: {instance.type}</p>
                   <p>Region: {instance.region}</p>

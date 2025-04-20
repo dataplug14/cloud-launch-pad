@@ -22,7 +22,7 @@ const CreateVM = () => {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[#1A1F2C] to-[#222222] flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
       </div>
     );
@@ -34,16 +34,16 @@ const CreateVM = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
+    <div className="min-h-screen bg-gradient-to-br from-[#1A1F2C] to-[#222222] flex">
       <SideNavigation />
       
       <main className="flex-1 p-6 overflow-auto">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold mb-6">Create Virtual Machine</h1>
+          <h1 className="text-2xl font-bold mb-6 text-white">Create Virtual Machine</h1>
           
-          <Card className="bg-white/80 backdrop-blur border border-white/20">
+          <Card className="bg-white/5 backdrop-blur-lg border border-white/10">
             <CardHeader>
-              <CardTitle className="text-xl">Configure New VM</CardTitle>
+              <CardTitle className="text-xl text-white">Configure New VM</CardTitle>
             </CardHeader>
             <CardContent>
               <LaunchInstanceForm onSuccess={handleLaunchFormSuccess} />
