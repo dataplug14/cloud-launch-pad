@@ -11,7 +11,7 @@ const CreateVM = () => {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  // Fixed the type signature to match LaunchInstanceForm's expected prop type
+  // Function signature correctly matches LaunchInstanceForm's expected prop type
   const handleLaunchFormSuccess = () => {
     toast({
       title: "Instance Created",
