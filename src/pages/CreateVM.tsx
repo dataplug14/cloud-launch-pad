@@ -11,16 +11,12 @@ const CreateVM = () => {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
-  const handleLaunchFormSuccess = () => {
-    console.log('Launch form success, redirecting to VM page...');
-    
-    // Show success message
+  const handleLaunchFormSuccess = (instanceDetails: any) => {
     toast({
-      title: "Instance Launched",
-      description: "Your new instance is being created. You will be redirected to the VM page.",
+      title: "Instance Created",
+      description: `Your new VM ${instanceDetails.name} is being launched.`
     });
     
-    // Redirect to the VM page
     navigate('/virtual-machines');
   };
 
@@ -45,7 +41,7 @@ const CreateVM = () => {
         <div className="max-w-4xl mx-auto">
           <h1 className="text-2xl font-bold mb-6">Create Virtual Machine</h1>
           
-          <Card className="bg-white/80 backdrop-blur border-gray-200/50">
+          <Card className="bg-white/80 backdrop-blur border border-white/20">
             <CardHeader>
               <CardTitle className="text-xl">Configure New VM</CardTitle>
             </CardHeader>
